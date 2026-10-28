@@ -23,7 +23,7 @@ func main() {
 	err := client.GetPosts(baseUrl, "fanbox", 37736420, &posts)
 	*/
 	var creator pawchive.Creator
-	err := client.GetCreator(baseUrl, "fanbox", 37736420, &creator)
+	err := client.GetCreator(baseUrl, "fanbox", 3773642, &creator)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

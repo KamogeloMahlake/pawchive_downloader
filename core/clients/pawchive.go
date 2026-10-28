@@ -53,13 +53,11 @@ func (c *Client) GetPosts(baseUrl, service string, userId int, posts *[]pawchive
 		  return err
 	  }
 		if len(temp) == 0 {
-			break
+			return nil
 		}
 		*posts = append(*posts, temp...)
 		offset += 50
 	}
-
-	return nil
 }
 
 func (c *Client) GetCreator(baseUrl, service string, userId int, creator *pawchive.Creator) error {
