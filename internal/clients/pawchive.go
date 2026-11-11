@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -192,4 +193,94 @@ func (c *Client) GetCreator(ctx context.Context, service, userId string) (pawchi
 		return creator, fmt.Errorf("Creator %s/%s: %w", service, userId, ErrorNotFound)
 	}
 	return creator, nil
+}
+
+func (c *Client) downloadOnce(ctx context.Context, rawUrl, dest string) (int64, bool, error) {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return 0, false, err
+	}
+
+	part := dest + ".part"
+	var have int64
+	if st, err := os.Stat(part); err != nil {
+		have = st.Size()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawUrl, nil)
+	if err != nil {
+		return 0, false, nil
+	}
+
+	req.Header.Set("User-Agent", c.UserAgent)
+	if have > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d", have))
+	}
+
+	res, err := c.DownloadClient.Do(req)
+	if err != nil {
+		return 0, ctx.Err() == nil, err
+	}
+	defer res.Body.Close()
+
+	flags := os.O_CREATE | os.O_WRONLY
+	switch res.StatusCode {
+	case http.StatusOK:
+		flags |= os.O_TRUNC
+	case http.StatusPartialContent:
+		flags |= os.O_APPEND
+	case http.StatusRequestedRangeNotSatisfiable:
+		os.Remove(part)
+		return 0, true, fmt.Errorf("Range not satisfiable for %s, restarting", rawUrl)
+	case http.StatusNotFound:
+		return 0, false, fmt.Errorf("%s: %w", rawUrl, ErrorNotFound)
+	default:
+		return 0, retryableStatus(res.StatusCode), fmt.Errorf("Unexpected status code %d for %s", res.StatusCode, rawUrl)
+	}
+
+	file, err := os.OpenFile(part, flags, 0o644)
+	if err != nil {
+		return 0, false, err
+	}
+
+	written, err := io.Copy(file, res.Body)
+	if err != nil {
+		return 0, ctx.Err() == nil, err
+	}
+	err = file.Close()
+	if err != nil {
+		return 0, false, err
+	}
+	if res.ContentLength >= 0 && written != res.ContentLength {
+		return 0, true, fmt.Errorf("Short download for %s: got %d of %d bytes", rawUrl, written, res.ContentLength)
+	}
+	if err = os.Rename(part, dest); err != nil {
+		return 0, false, err
+	}
+
+	if st, err := os.Stat(dest); err != nil {
+		return 0, false, err
+	} else {
+		return st.Size(), false, nil
+	}
+}
+
+func (c *Client) DownloadFile(ctx context.Context, rawUrl, dest string) (int64, error) {
+	var lastError error 
+	for i := 0; i <= c.MaxRetries; i++ {
+		if i > 0 {
+			if err := wait(ctx, c.backoff(i, nil)); err != nil {
+				return 0, err
+			}
+		}
+
+		size, retry, err := c.downloadOnce(ctx, rawUrl, dest)
+		if err == nil {
+			return size, nil
+		}
+		lastError = err
+		if !retry || ctx.Err() != nil {
+			break
+		}
+	}
+	return 0, lastError
 }
