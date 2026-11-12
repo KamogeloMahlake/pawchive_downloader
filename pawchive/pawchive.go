@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"path"
+	"strings"
 )
 
 type Creator struct {
@@ -18,11 +20,13 @@ type Creator struct {
 type Attachment struct {
     Name string `json:"name"`
     Path string `json:"path"`
+		Server string `json:"server"`
 }
 
 type File struct {
     Name string `json:"name"`
     Path string `json:"path"`
+		Server string `json:"server"`
 }
 
 type Post struct {
@@ -38,7 +42,6 @@ type Post struct {
     Published   string       `json:"published"`
     File        File         `json:"file"`
     Attachments []Attachment `json:"attachments"`
-    Tags        []string     `json:"tags"`
 }
 
 type CreatorResponse struct {
@@ -50,11 +53,17 @@ type CreatorResponse struct {
 func (p Post) AllFiles() []File {
 	seen := map[string]bool{}
 	var files []File
-	addFile(p.File.Name, p.File.Path, &files, seen)
+	if p.File != (File{}) {
+	  addFile(p.File.Name, fileUrl(p.File.Name, p.File.Path, p.File.Server), &files, seen)
+	}
 	for _, attach := range p.Attachments {
-		addFile(attach.Name, attach.Path, &files, seen)
+		addFile(attach.Name, fileUrl(attach.Name, attach.Path, attach.Server), &files, seen)
 	}
 	return files
+}
+
+func fileUrl(name, path, server string) string {
+	return fmt.Sprintf("%s/data/%s?f=%s", server, path, strings.ReplaceAll(name, " ", "%20"))
 }
 
 func addFile(name, filepath string, files *[]File, seen map[string]bool) {
@@ -79,9 +88,8 @@ func (p Post) Fingerprint() string {
 		Edited string
 		File File
 		Attachments []Attachment
-		Tags []string
 		Embed map[string]any
-	}{p.Title, p.Content, p.Edited, p.File, p.Attachments, p.Tags, p.Embed}
+	}{p.Title, p.Content, p.Edited, p.File, p.Attachments, p.Embed}
 
 	data, _ := json.Marshal(post)
 	sum := sha256.Sum256(data)

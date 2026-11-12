@@ -30,7 +30,7 @@ var tmplCreator = template.Must(template.New("creator").Parse(pageHead + `
 var tmplPost = template.Must(template.New("post").Parse(pageHead + `
 <p><a href="/c/{{.Service}}/{{.UserID}}">&larr; {{.Creator}}</a></p>
 <h1>{{.Post.Title}}</h1>
-<p class="muted">published {{.Post.Published}}{{if .Post.Edited}} - edited {{.Post.Edited}}{{end}}{{if .Post.Tags}} - tags: {{range .Post.Tags}}{{.}} {{end}}{{end}}</p>
+<p class="muted">published {{.Post.Published}}{{if .Post.Edited}} - edited {{.Post.Edited}}{{end}}</p>
 <div class="post">{{.Text}}</div>
 {{range .Files}}
   {{if .Missing}}<p class="warn">{{.Name}}: not downloaded{{if .Error}} ({{.Error}}){{end}}</p>

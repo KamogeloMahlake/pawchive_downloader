@@ -66,9 +66,6 @@ func PrintPost(w io.Writer, st *storage.Store, service, id, postID string) error
 	fmt.Fprintf(w, "%s\n%s\n", post.Title, strings.Repeat("=", len([]rune(post.Title))))
 	fmt.Fprintf(w, "post %s by %s (%s)\n", post.ID, ix.Name, service)
 	fmt.Fprintf(w, "published: %s   edited: %s\n", post.Published, post.Edited)
-	if len(post.Tags) > 0 {
-		fmt.Fprintf(w, "tags: %s\n", strings.Join(post.Tags, ", "))
-	}
 	fmt.Fprintf(w, "\n%s\n\n", StripHTML(post.Content))
 
 	rec := ix.Posts[postID]

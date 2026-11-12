@@ -42,9 +42,7 @@ func NewClient(baseUrl string) *Client {
 				TLSHandshakeTimeout: time.Second * 15,
 			},
 		},
-		UserAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-AppleWebKit/537.36 (KHTML, like Gecko)
-Chrome/124.0.0.0 Safari/537.36 KemonoSuite/2.0`,
+		UserAgent: "pawchive_downloader/0.2",
 		MaxRetries: 3,
 		RetryDelay: time.Second * 2,
 
@@ -173,7 +171,7 @@ func (c *Client) GetPosts(ctx context.Context, service, userId string) ([]pawchi
 		if added == 0 {
 			return posts, nil
 		}
-		offset += len(temp)
+		offset += 50
 	}
 }
 
@@ -185,7 +183,7 @@ func (c *Client) GetCreator(ctx context.Context, service, userId string) (pawchi
 		return creator, err
 	}
 
-	if err = json.Unmarshal(data, creator); err != nil {
+	if err = json.Unmarshal(data, &creator); err != nil {
 		return creator, err
 	}
 
@@ -202,7 +200,7 @@ func (c *Client) downloadOnce(ctx context.Context, rawUrl, dest string) (int64, 
 
 	part := dest + ".part"
 	var have int64
-	if st, err := os.Stat(part); err != nil {
+	if st, err := os.Stat(part); err == nil {
 		have = st.Size()
 	}
 
