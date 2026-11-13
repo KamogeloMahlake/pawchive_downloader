@@ -77,7 +77,7 @@ func (s *server) creator(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, row{post, day(post.Published)})
 	}
 	render(w, tmplCreator, map[string]any{
-		"Title": index.Name, "Name": index.Name, "Service": index.Service, "UserId": index.UserID,
+		"Title": index.Name, "Name": index.Name, "Service": index.Service, "UserID": index.UserID,
 		"Count": len(index.Posts), "Query": query, "Posts":rows,
 	})
 }
@@ -95,7 +95,7 @@ func (s *server) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type fileView struct {
-		Name, Kind, Url, Error string
+		Name, Kind, URL, Error string
 		Size int64
 		Missing bool
 	}
@@ -104,7 +104,7 @@ func (s *server) post(w http.ResponseWriter, r *http.Request) {
 		for _, file := range record.Files {
 			files = append(files, fileView{
 				Name: file.Name, Kind: FileKind(file.Name), Size: file.Size, Error: file.Error, Missing: !file.Done,
-				Url: "/files/" + service + "/" + id + "/" + postId + "/" + file.LocalName,
+				URL: "/files/" + service + "/" + id + "/" + postId + "/" + file.LocalName,
 			})
 		}
 	}
@@ -145,7 +145,7 @@ func Serve(ctx context.Context, st *storage.Store, addr string, logw io.Writer) 
 	go func() { errc <- srv.ListenAndServe() }()
 	fmt.Fprintf(logw, "viewer running at http://%s (Ctrl+C to stop)\n", addr)
 	select {
-	case err := <- errc:
+	case err := <-errc:
 		return err
 	case <-ctx.Done():
 		shut, cancel := context.WithTimeout(context.Background(), time.Second*3)

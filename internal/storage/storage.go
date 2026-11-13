@@ -16,7 +16,7 @@ import (
 	"github.com/KamogeloMahlake/pawchive_downloader/pawchive"
 )
 
-//Store is a handle on the data directory
+// Store is a handle on the data directory
 type Store struct {
 	Root string
 }
@@ -27,7 +27,7 @@ func NewStore(dir string) *Store {
 	return &Store{Root: dir}
 }
 
-//ValidSegment check that s is safe to use as one folder or filename.
+// ValidSegment check that s is safe to use as one folder or filename.
 func ValidSegment(s string) error {
 	switch  {
 	case s == "":
@@ -45,7 +45,7 @@ func ValidSegment(s string) error {
 	return nil
 }
 
-//SafeName turns string into something that passes ValidSegment.
+// SafeName turns string into something that passes ValidSegment.
 func SafeName(s string, max int) string {
 	var builder strings.Builder
 	for _, r := range s {
@@ -80,7 +80,7 @@ func SafeName(s string, max int) string {
 	return name
 }
 
-//CreatorDir returns <root>/<service>/<id> after validating both parts. 
+// CreatorDir returns <root>/<service>/<id> after validating both parts. 
 func (s *Store) CreatorDir(service, id string) (string, error) {
 	if err := ValidSegment(service); err != nil {
 		return "", fmt.Errorf("service: %w", err)
@@ -91,7 +91,7 @@ func (s *Store) CreatorDir(service, id string) (string, error) {
 	return filepath.Join(s.Root, service, id), nil
 }
 
-//PostDir returns the folder of the on post 
+// PostDir returns the folder of the on post 
 func (s *Store) PostDir(service, id, postId string) (string, error) {
 	dir, err := s.CreatorDir(service, id)
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *Store) PostDir(service, id, postId string) (string, error) {
 	return filepath.Join(dir, "posts", postId), nil
 }
 
-//FilesDir returns the folder holding a post's downloaded files.
+// FilesDir returns the folder holding a post's downloaded files.
 func (s *Store) FilesDir(service, id, postId string) (string, error) {
 	dir, err := s.PostDir(service, id, postId)
 	if err != nil {
@@ -112,8 +112,8 @@ func (s *Store) FilesDir(service, id, postId string) (string, error) {
 	return filepath.Join(dir, "files"), nil
 }
 
-//writFileAtomic writes data to a temporary file and renames it over path, so a crash can never leave a half-written JSON file behind
-func writFileAtomic(path string, data []byte) error {
+// writFileAtomic writes data to a temporary file and renames it over path, so a crash can never leave a half-written JSON file behind
+func writeFileAtomic(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	return writFileAtomic(path, data)
+	return writeFileAtomic(path, data)
 }
 
 func readJSON(path string, v any) error {
@@ -155,7 +155,7 @@ func readJSON(path string, v any) error {
 	return json.Unmarshal(data, v)
 }
 
-//LoadIndex read a creator's index.
+// LoadIndex read a creator's index.
 func (s *Store) LoadIndex(service, id string) (*Index, error) {
 	dir, err := s.CreatorDir(service, id)
 	if err != nil {
@@ -175,7 +175,7 @@ func (s *Store) LoadIndex(service, id string) (*Index, error) {
 	return &index, nil
 }
 
-//OpenIndex returns an empty index for a new creator.
+// OpenIndex returns an empty index for a new creator.
 func (s *Store) OpenIndex(service, id string) (*Index, error) {
 	index, err := s.LoadIndex(service, id)
 	if errors.Is(err, ErrorNotStored) {
@@ -188,7 +188,7 @@ func (s *Store) OpenIndex(service, id string) (*Index, error) {
 	return index, err
 }
 
-//SaveIndex writes the index to disk
+// SaveIndex writes the index to disk
 func (s *Store) SaveIndex(index *Index) error {
 	dir, err := s.CreatorDir(index.Service, index.UserID)
 	if err != nil {
@@ -206,7 +206,7 @@ func (s *Store) SaveCreator(c pawchive.Creator) error {
 	return writeJSON(filepath.Join(dir, "creator.json"), c)
 }
 
-//SavePost writes post.json. If a different is already stored, the old is move to history/ first.
+// SavePost writes post.json. If a different is already stored, the old is move to history/ first.
 func (s *Store) SavePost(service, id string, p pawchive.Post) error {
 	dir, err := s.PostDir(service, id, p.ID)
 	if err != nil {
@@ -218,7 +218,7 @@ func (s *Store) SavePost(service, id string, p pawchive.Post) error {
 		var prev pawchive.Post
 		if json.Unmarshal(old, &prev) == nil && prev.Fingerprint() != p.Fingerprint() {
 			name := time.Now().UTC().Format("20060102T150405.000000000Z") + ".json"
-			if err := writFileAtomic(filepath.Join(dir, "history", name), old); err != nil {
+			if err := writeFileAtomic(filepath.Join(dir, "history", name), old); err != nil {
 				return nil
 			}
 		} 
@@ -242,7 +242,7 @@ func (s *Store) LoadPost(service, id, postId string) (pawchive.Post, error) {
 	return post, nil
 }
 
-//ListCreators return the index of every creator in the data folder.
+// ListCreators return the index of every creator in the data folder.
 func (s *Store) ListCreators() ([]*Index, error) {
 	var output []*Index
 	services, err := os.ReadDir(s.Root)

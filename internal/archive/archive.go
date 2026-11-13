@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,16 +32,12 @@ func (s *Syncer) logf(format string, args ...any) {
 	}
 }
 
-func (s *Syncer) fileUrl(p string) (string, error) {
-	if strings.HasPrefix(p, "https://") || strings.HasPrefix(p, "http://") {
-		return p, nil
+func (s *Syncer) fileUrl(file storage.FileRecord) string {
+	if strings.HasPrefix(file.RemotePath, "https://") || strings.HasPrefix(file.RemotePath, "http://") {
+		return file.RemotePath
 	}
-	u, err := url.Parse(s.DataUrl)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return "", fmt.Errorf("Invalid data url %s", s.DataUrl)
-	}
-	u.Path = strings.TrimRight(u.Path, "/") + "/" + strings.TrimLeft(p, "/")
-	return u.String(), nil
+	
+	return fmt.Sprintf("%s/data/%s?f=%s", file.Server, file.RemotePath, strings.ReplaceAll(file.Name, " ", "%20"))
 }
 
 // localName gives a file a stable, collision-free name inside files/
@@ -61,19 +56,19 @@ func mergeFiles(post pawchive.Post, old []storage.FileRecord) []storage.FileReco
 	for _, file := range post.AllFiles() {
 		if record, ok := prev[file.Path]; ok {
 			record.Name = file.Name
+			if file.Server != "" {
+				record.Server = file.Server
+			}
 			output = append(output, record)
 			continue
 		}
-		output = append(output, storage.FileRecord{Name: file.Name, RemotePath: file.Path, LocalName: localName(file)})
+		output = append(output, storage.FileRecord{Name: file.Name, RemotePath: file.Path, LocalName: localName(file), Server: file.Server})
 	}
 	return output
 }
 
 func (s *Syncer) downloadOne(ctx context.Context, dir string, file *storage.FileRecord) error {
-	u, err := s.fileUrl(file.RemotePath)
-	if err != nil {
-		return err
-	}
+	u:= s.fileUrl(*file)
 	size, err := s.Client.DownloadFile(ctx, u, filepath.Join(dir, file.LocalName))
 	if err != nil {
 		return err
@@ -167,7 +162,7 @@ func (s *Syncer) syncPost(ctx context.Context, index *storage.Index, post pawchi
 		record.LastChanged = now
 	}
 
-	record.Title, record.Published, record.Edited, record.FingerPrint = post.Title, post.Published, post.Edited, record.FingerPrint
+	record.Title, record.Published, record.Edited, record.FingerPrint = post.Title, post.Published, post.Edited, fingerprint
 	record.Files = mergeFiles(post, record.Files)
 
 	if !s.Skipfiles {

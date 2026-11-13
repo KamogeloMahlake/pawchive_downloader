@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"path"
 	"strings"
 )
@@ -42,6 +41,7 @@ type Post struct {
     Published   string       `json:"published"`
     File        File         `json:"file"`
     Attachments []Attachment `json:"attachments"`
+		Tags        string       `json:"tags"`
 }
 
 type CreatorResponse struct {
@@ -51,45 +51,52 @@ type CreatorResponse struct {
 
 //Returns the post's main file followed by every attachment.
 func (p Post) AllFiles() []File {
-	seen := map[string]bool{}
+	seen := map[string]int{}
 	var files []File
 	if p.File != (File{}) {
-	  addFile(p.File.Name, fileUrl(p.File.Name, p.File.Path, p.File.Server), &files, seen)
+	  addFile(p.File.Name, p.File.Path, p.File.Server, &files, seen)
 	}
 	for _, attach := range p.Attachments {
-		addFile(attach.Name, fileUrl(attach.Name, attach.Path, attach.Server), &files, seen)
+		addFile(attach.Name, attach.Path, attach.Server, &files, seen)
 	}
 	return files
 }
 
-func fileUrl(name, path, server string) string {
-	return fmt.Sprintf("%s/data/%s?f=%s", server, path, strings.ReplaceAll(name, " ", "%20"))
-}
+func addFile(name, filepath, server string, files *[]File, seen map[string]int) {
+	filepath = strings.TrimSpace(filepath)
 
-func addFile(name, filepath string, files *[]File, seen map[string]bool) {
-	if filepath == "" || seen[filepath] {
-		return 
+	if filepath == "" { return }
+	if i, ok := seen[filepath]; ok {
+		if (*files)[i].Server == "" {
+			(*files)[i].Server = server
+		}
+		return
 	}
-	seen[filepath] = true
+
 	if name == "" {
 		name = path.Base(filepath)
 	}
+	seen[filepath] = len(*files)
 
-	*files = append(*files, File{Name: name, Path: filepath})
-	
+	*files = append(*files, File{Name: name, Path: filepath, Server: strings.TrimSpace(server)})	
 }
 
 //Returns a hash of every field that matters when deciding whether a post
 // has been edited since we last saved it.
 func (p Post) Fingerprint() string {
+	type file struct{Name, Path string}
+	files := []file{}
+	for _, f := range p.AllFiles() {
+		files = append(files, file{Name: f.Name, Path: f.Path})
+	}
+	
 	post := struct{
 		Title string
 		Content string
 		Edited string
-		File File
-		Attachments []Attachment
+		Files []file
 		Embed map[string]any
-	}{p.Title, p.Content, p.Edited, p.File, p.Attachments, p.Embed}
+	}{p.Title, p.Content, p.Edited, files, p.Embed}
 
 	data, _ := json.Marshal(post)
 	sum := sha256.Sum256(data)

@@ -121,7 +121,8 @@ func (c *Client) fetch(ctx context.Context, url string)([]byte, error) {
 		switch {
 		case res.StatusCode == http.StatusOK:
 			if readErr != nil {
-				return nil, readErr
+				lastError = readErr
+				continue
 			}
 			return data, nil
 		case res.StatusCode == http.StatusNotFound:
