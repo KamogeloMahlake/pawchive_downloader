@@ -7,9 +7,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go 1.22+">
+  <img src="https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go 1.26.3+">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-555?style=for-the-badge" alt="Platforms: Windows, Linux, macOS">
-  <img src="https://img.shields.io/badge/Tests-race%20detector%20clean-success?style=for-the-badge" alt="Tests pass with the race detector">
 </p>
 
 ---
